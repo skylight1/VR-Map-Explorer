@@ -114,7 +114,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   private float[] modelFloor;
 
   private float objectDistance = 12f;
-  private float floorDepth = 200f;
+  private float floorDepth = 100f;
 
   private CardboardOverlayView overlayView;
 
@@ -204,7 +204,6 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     headView = new float[16];
 
     overlayView = (CardboardOverlayView) findViewById(R.id.overlay);
-    overlayView.show3DToast("Pull the magnet when you find an object.");
 
   Runnable task = new Runnable() {
       public void run() {
@@ -526,59 +525,40 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
    */
   public void drawFloor() {
       GLES20.glUseProgram(floorProgram);
-      checkGLError("drawing floor1");
 
       // Set program handles for cube drawing.
       mMVPMatrixHandle = GLES20.glGetUniformLocation(floorProgram, "u_MVPMatrix");
       mMVMatrixHandle = GLES20.glGetUniformLocation(floorProgram, "u_MVMatrix");
       mLightPosHandle = GLES20.glGetUniformLocation(floorProgram, "u_LightPos");
       mTextureUniformHandle = GLES20.glGetUniformLocation(floorProgram, "u_Texture");
-      checkGLError("drawing floor1");
 
       mPositionHandle = GLES20.glGetAttribLocation(floorProgram, "a_Position");
-//    mColorHandle = GLES20.glGetAttribLocation(floorProgram, "a_Color");
-//    mNormalHandle = GLES20.glGetAttribLocation(floorProgram, "a_Normal");
       mTextureCoordinateHandle = GLES20.glGetAttribLocation(floorProgram, "a_TexCoordinate");
-      checkGLError("drawing floor1");
-
 
       floorVertices.position(0);
       GLES20.glVertexAttribPointer(mPositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
               0, floorVertices);
       GLES20.glEnableVertexAttribArray(mPositionHandle);
-      checkGLError("drawing floor1");
 
       floorTextureCoords.position(0);
       GLES20.glVertexAttribPointer(mTextureCoordinateHandle, COORDS_PER_TEXTURE, GLES20.GL_FLOAT, false,
               0, floorTextureCoords);
       GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
-      checkGLError("drawing floor1");
 
       // Pass in the modelview matrix.
       GLES20.glUniformMatrix4fv(mMVMatrixHandle, 1, false, modelView, 0);
-      checkGLError("drawing floor1");
 
       // Pass in the combined matrix.
       GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, modelViewProjection, 0);
-      checkGLError("drawing floor1");
 
       // Pass in the light position in eye space.
       GLES20.glUniform3f(mLightPosHandle, 10, 10, 10);
-      checkGLError("drawing floor1");
-
-      GLES20.glEnableVertexAttribArray(mPositionHandle);
-      checkGLError("drawing floor1");
-      GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
-      checkGLError("drawing floor1");
 
       // Bind the texture to this unit.
       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
-      checkGLError("drawing floor1");
 
       // Tell the texture uniform sampler to use this texture in the shader by binding to texture unit 0.
       GLES20.glUniform1i(mTextureUniformHandle, 0);
-
-      checkGLError("drawing floor1");
 
       // Draw the cube.
       GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6);
