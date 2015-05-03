@@ -63,11 +63,12 @@ import javax.microedition.khronos.egl.EGLConfig;
 public class MainActivity extends CardboardActivity implements CardboardView.StereoRenderer {
 
     private int mTextureDataHandle;
-    private float[] smallerArray;
+    private float[][] smallerArray;
     private int shapeProgram;
     private int mShapePositionHandle;
     private int mShapeMVPMatrixHandle;
     private int mShapeMVMatrixHandle;
+    private int[] shapeVertexOffsets;
 
     private static class HelpfulArcGISImageServiceLayer extends ArcGISImageServiceLayer {
 
@@ -319,6 +320,10 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
             if (results != null) {
                 int size = (int) results.featureCount();
                 Log.e("arcadiusDebug", "Number of Polygons: " + size);
+
+                smallerArray = new float[size][];
+
+                int i = 0;
                 for (Object element : results) {
                     progress.incrementProgressBy(size / 100);
                     if (element instanceof Feature) {
@@ -334,7 +339,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
                                 feature.getSymbol(),
                                 feature.getAttributes());
 
-                        smallerArray = getEveryNthPointFromThisMultiPath(arcMultiPath, 100);
+                        smallerArray[i++] = getEveryNthPointFromThisMultiPath(arcMultiPath, 100);
                     }
                 }
                 // update message with results
@@ -419,26 +424,41 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     private void onGeometriesCreated() {
 //        smallerArray = new float[] {100, 10, -100, 100, 10, 100, -100, 10, 100, -100, 10, -100};
 
-        RectF boundingRectangle = new RectF(smallerArray[0], smallerArray[2], smallerArray[0], smallerArray[2]);
-        for (int i = 3; i < smallerArray.length; i+=3) {
-            boundingRectangle.union(smallerArray[i], smallerArray[i+2]);
+        RectF boundingRectangle = new RectF(smallerArray[0][0], smallerArray[0][2], smallerArray[0][0], smallerArray[0][2]);
+        for (int j  = 0; j < smallerArray.length; j++) {
+            for (int i = 3; i < smallerArray[j].length; i+=3) {
+                boundingRectangle.union(smallerArray[j][i], smallerArray[j][i + 2]);
+            }
         }
 
-        float scale = Math.min(2000f/boundingRectangle.width(), 2000f/boundingRectangle.height());
+        float scale = Math.min(2000f / boundingRectangle.width(), 2000f / boundingRectangle.height());
         float offsetX = boundingRectangle.centerX();
         float offsetZ = boundingRectangle.centerY();
 
-        for (int i = 0; i < smallerArray.length; i+=3) {
-            smallerArray[i] = (smallerArray[i] - offsetX) * scale;
-            smallerArray[i+1] = 5f;
-            smallerArray[i+2] = (smallerArray[i+2] - offsetZ) * scale;
+        for (int j  = 0; j < smallerArray.length; j++) {
+          for (int i = 0; i < smallerArray[j].length; i+=3) {
+              smallerArray[j][i] = (smallerArray[j][i] - offsetX) * scale;
+              smallerArray[j][i + 1] = 5f;
+              smallerArray[j][i + 2] = (smallerArray[j][i + 2] - offsetZ) * scale;
+          }
         }
 
         // make a shapes
-        ByteBuffer bbShapeVertices = ByteBuffer.allocateDirect(smallerArray.length * 4);
+        shapeVertexOffsets = new int[smallerArray.length];
+        int totalLength = 0;
+        int offset = 0;
+        for (int j = 0; j < smallerArray.length; j++) {
+            shapeVertexOffsets[j] = offset;
+            totalLength += smallerArray[j].length;
+            offset += smallerArray[j].length;
+        }
+
+        ByteBuffer bbShapeVertices = ByteBuffer.allocateDirect(totalLength * 4);
         bbShapeVertices.order(ByteOrder.nativeOrder());
         shapeVertices = bbShapeVertices.asFloatBuffer();
-        shapeVertices.put(smallerArray);
+        for (int j = 0; j < smallerArray.length; j++) {
+            shapeVertices.put(smallerArray[j]);
+        }
         shapeVertices.position(0);
 
         shapesLoaded = true;
@@ -583,21 +603,23 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         mShapeMVMatrixHandle = GLES20.glGetUniformLocation(shapeProgram, "u_MVMatrix");
         mShapePositionHandle = GLES20.glGetAttribLocation(shapeProgram, "a_Position");
 
-        shapeVertices.position(0);
-        GLES20.glVertexAttribPointer(mShapePositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
-                0, shapeVertices);
-        GLES20.glEnableVertexAttribArray(mShapePositionHandle);
+        for (int j = 0; j < smallerArray.length; j++) {
+            shapeVertices.position(shapeVertexOffsets[j]);
+            GLES20.glVertexAttribPointer(mShapePositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
+                    0, shapeVertices);
+            GLES20.glEnableVertexAttribArray(mShapePositionHandle);
 
-        // Pass in the modelview matrix.
-        GLES20.glUniformMatrix4fv(mShapeMVMatrixHandle, 1, false, modelView, 0);
+            // Pass in the modelview matrix.
+            GLES20.glUniformMatrix4fv(mShapeMVMatrixHandle, 1, false, modelView, 0);
 
-        // Pass in the combined matrix.
-        GLES20.glUniformMatrix4fv(mShapeMVPMatrixHandle, 1, false, modelViewProjection, 0);
+            // Pass in the combined matrix.
+            GLES20.glUniformMatrix4fv(mShapeMVPMatrixHandle, 1, false, modelViewProjection, 0);
 
-        // Draw the cube.
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, smallerArray.length / 3);
+            // Draw the cube.
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, smallerArray[j].length / 3);
 
-        checkGLError("drawing shapes");
+            checkGLError("drawing shapes");
+        }
     }
 
     @Override
