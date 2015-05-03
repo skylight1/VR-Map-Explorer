@@ -20,6 +20,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.RectF;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.opengl.Matrix;
@@ -62,7 +63,11 @@ import javax.microedition.khronos.egl.EGLConfig;
 public class MainActivity extends CardboardActivity implements CardboardView.StereoRenderer {
 
     private int mTextureDataHandle;
-    private Float[] smallerArray;
+    private float[] smallerArray;
+    private int shapeProgram;
+    private int mShapePositionHandle;
+    private int mShapeMVPMatrixHandle;
+    private int mShapeMVMatrixHandle;
 
     private static class HelpfulArcGISImageServiceLayer extends ArcGISImageServiceLayer {
 
@@ -104,6 +109,8 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     private FloatBuffer floorVertices;
     private FloatBuffer floorTextureCoords;
 
+    private FloatBuffer shapeVertices;
+
     private int floorProgram;
 
     private float[] modelCube;
@@ -113,6 +120,8 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     private float[] modelViewProjection;
     private float[] modelView;
     private float[] modelFloor;
+
+    private boolean shapesLoaded;
 
     private float objectDistance = 12f;
     private float floorDepth = 100f;
@@ -278,7 +287,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         }
 
 
-        Float[] getEveryNthPointFromThisMultiPath(MultiPath arcMultiPathParam, int everyNpoints) {
+        float[] getEveryNthPointFromThisMultiPath(MultiPath arcMultiPathParam, int everyNpoints) {
             int arcPointCount = arcMultiPathParam.getPointCount();
             Log.e("arcadiusDebug", "arcPointCount: " + arcPointCount);
 
@@ -290,9 +299,11 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
                 newSmallerArrayToReturn.add((float) arcMultiPathParam.getPoint(i).getY());
             }
 
-            Float[] simpleArray = new Float[newSmallerArrayToReturn.size()];
+            float[] simpleArray = new float[newSmallerArrayToReturn.size()];
 
-            newSmallerArrayToReturn.toArray(simpleArray);
+            for(int i = 0; i < newSmallerArrayToReturn.size(); i++) {
+                simpleArray[i] = newSmallerArrayToReturn.get(i).floatValue();
+            }
 
             Log.e("arcadiusDebug", "Big array points: " + arcMultiPathParam.getPointCount());
             Log.e("arcadiusDebug", "Small array points: " + simpleArray.length);
@@ -330,6 +341,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
                 message = String.valueOf(results.featureCount())
                         + " results have returned from query.";
 
+                onGeometriesCreated();
             }
             progress.dismiss();
 
@@ -382,6 +394,12 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         floorProgram = ShaderHelper.createAndLinkProgram(floorVertexShader, floorFragmentShader,
                 new String[]{"a_Position", "a_Color", "a_Normal", "a_TexCoordinate"});
 
+        int shapeVertexShader = loadGLShader(GLES20.GL_VERTEX_SHADER, R.raw.shape_vertex);
+        int shapeFragmentShader = loadGLShader(GLES20.GL_FRAGMENT_SHADER, R.raw.shape_fragment);
+
+        shapeProgram = ShaderHelper.createAndLinkProgram(shapeVertexShader, shapeFragmentShader,
+                new String[]{"a_Position"});
+
         checkGLError("Floor program");
 
         checkGLError("Floor program params");
@@ -396,6 +414,36 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         Matrix.translateM(modelFloor, 0, 0, -floorDepth, 0); // Floor appears below user.
 
         checkGLError("onSurfaceCreated");
+    }
+
+    private void onGeometriesCreated() {
+//        smallerArray = new float[] {100, 10, -100, 100, 10, 100, -100, 10, 100, -100, 10, -100};
+
+        RectF boundingRectangle = new RectF(smallerArray[0], smallerArray[2], smallerArray[0], smallerArray[2]);
+        for (int i = 3; i < smallerArray.length; i+=3) {
+            boundingRectangle.union(smallerArray[i], smallerArray[i+2]);
+        }
+
+        float scale = Math.min(2000f/boundingRectangle.width(), 2000f/boundingRectangle.height());
+        float offsetX = boundingRectangle.centerX();
+        float offsetZ = boundingRectangle.centerY();
+
+        for (int i = 0; i < smallerArray.length; i+=3) {
+            smallerArray[i] = (smallerArray[i] - offsetX) * scale;
+            smallerArray[i+1] = 5f;
+            smallerArray[i+2] = (smallerArray[i+2] - offsetZ) * scale;
+        }
+
+        // make a shapes
+        ByteBuffer bbShapeVertices = ByteBuffer.allocateDirect(smallerArray.length * 4);
+        bbShapeVertices.order(ByteOrder.nativeOrder());
+        shapeVertices = bbShapeVertices.asFloatBuffer();
+        shapeVertices.put(smallerArray);
+        shapeVertices.position(0);
+
+        shapesLoaded = true;
+
+        checkGLError("Geometries program");
     }
 
     public byte[] loadTile() {
@@ -524,7 +572,32 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     }
 
     private void drawShapes() {
-        
+        if (!shapesLoaded) {
+            return;
+        }
+
+        GLES20.glUseProgram(shapeProgram);
+
+        // Set program handles for cube drawing.
+        mShapeMVPMatrixHandle = GLES20.glGetUniformLocation(shapeProgram, "u_MVPMatrix");
+        mShapeMVMatrixHandle = GLES20.glGetUniformLocation(shapeProgram, "u_MVMatrix");
+        mShapePositionHandle = GLES20.glGetAttribLocation(shapeProgram, "a_Position");
+
+        shapeVertices.position(0);
+        GLES20.glVertexAttribPointer(mShapePositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
+                0, shapeVertices);
+        GLES20.glEnableVertexAttribArray(mShapePositionHandle);
+
+        // Pass in the modelview matrix.
+        GLES20.glUniformMatrix4fv(mShapeMVMatrixHandle, 1, false, modelView, 0);
+
+        // Pass in the combined matrix.
+        GLES20.glUniformMatrix4fv(mShapeMVPMatrixHandle, 1, false, modelViewProjection, 0);
+
+        // Draw the cube.
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, smallerArray.length / 3);
+
+        checkGLError("drawing shapes");
     }
 
     @Override
