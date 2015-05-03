@@ -16,16 +16,29 @@
 
 package org.skylight1.vrmapexplorer;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.opengl.Matrix;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
+import com.esri.android.map.MapView;
 import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
+import com.esri.core.geometry.Geometry;
+import com.esri.core.geometry.MultiPath;
+import com.esri.core.geometry.SpatialReference;
+import com.esri.core.map.Feature;
+import com.esri.core.map.FeatureResult;
+import com.esri.core.map.Graphic;
+import com.esri.core.tasks.query.QueryParameters;
+import com.esri.core.tasks.query.QueryTask;
 import com.google.vrtoolkit.cardboard.CardboardActivity;
 import com.google.vrtoolkit.cardboard.CardboardView;
 import com.google.vrtoolkit.cardboard.Eye;
@@ -93,6 +106,9 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   private float floorDepth = 20f;
 
   private CardboardOverlayView overlayView;
+
+  ProgressDialog progress;
+  MapView mMapView;
 
 
 
@@ -191,7 +207,156 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
     overlayView = (CardboardOverlayView) findViewById(R.id.overlay);
     overlayView.show3DToast("Pull the magnet when you find an object.");
-  }
+
+
+//  new Thread(new Runnable() {
+//      @Override
+//      public void run() {
+//
+//  try {
+//
+//      String[] queryArray = {"http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_Average_Household_Size/MapServer/3", "AVGHHSZ_CY>3.5"};
+//      AsyncQueryTask ayncQuery = new AsyncQueryTask();
+//      ayncQuery.execute(queryArray);
+//  } catch (Exception e) {
+//      Log.e("Arcadius Error","Before starting thread: begin ex");
+//      e.printStackTrace();
+//      Log.e("Arcadius Error","Before starting thread: end ex");
+//  }
+//
+//      }
+//  }).start();
+
+
+  Runnable task = new Runnable() {
+      public void run() {
+          try {
+              String[] queryArray = {"http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_Average_Household_Size/MapServer/3", "AVGHHSZ_CY>3.5"};
+              AsyncQueryTask asyncQuery = new AsyncQueryTask();
+              asyncQuery.execute(queryArray);
+          } catch (Exception e) {
+              Log.e("Arcadius Error", "Before starting thread: begin ex");
+              e.printStackTrace();
+              Log.e("Arcadius Error", "Before starting thread: end ex");
+          }
+      }
+  };
+  new Handler(Looper.getMainLooper()).post(task);
+}
+
+
+
+private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
+
+    @Override
+    protected void onPreExecute() {
+        progress = new ProgressDialog(MainActivity.this);
+
+        progress = ProgressDialog.show(MainActivity.this, "",
+                "Please wait....query task is executing");
+
+    }
+
+    /**
+     * First member in string array is the query URL; second member is the
+     * where clause.
+     */
+    @Override
+    protected FeatureResult doInBackground(String... queryArray) {
+
+        if (queryArray == null || queryArray.length <= 1)
+            return null;
+
+        String url = queryArray[0];
+        QueryParameters qParameters = new QueryParameters();
+        String whereClause = queryArray[1];
+        SpatialReference sr = SpatialReference.create(102100);
+       // qParameters.setGeometry(mMapView.getExtent());
+        qParameters.setOutSpatialReference(sr);
+        qParameters.setReturnGeometry(true);
+        qParameters.setWhere(whereClause);
+
+        QueryTask qTask = new QueryTask(url);
+
+        try {
+            FeatureResult results = qTask.execute(qParameters);
+            return results;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+
+    }
+
+    @Override
+    protected void onPostExecute(FeatureResult results) {
+
+        String message = "No result comes back";
+
+        if (results != null) {
+            int size = (int) results.featureCount();
+            for (Object element : results) {
+                progress.incrementProgressBy(size / 100);
+                if (element instanceof Feature) {
+                    Feature feature = (Feature) element;
+                    // turn feature into graphic\
+
+                    Geometry arcGeometry = feature.getGeometry();
+                    Geometry.Type arcType = arcGeometry.getType();
+                    //int arcValue = arcType.value();
+
+
+
+                    MultiPath arcMultiPath = (MultiPath)arcGeometry;
+                    int arcPointCount = arcMultiPath.getPointCount();
+
+
+                    Graphic graphic = new Graphic(feature.getGeometry(),
+                            feature.getSymbol(),
+                            feature.getAttributes());
+
+                    Log.e("arcValue", "arcPointCount: "+arcPointCount);
+                    Log.e("arcValue", "arcType.name: "+arcType.name());
+                    Log.e("arcValue", "Point0: "+arcMultiPath.getPoint(0));
+
+                    //Projected Bounds: -20037508.3428, -19971868.8804, 20037508.3428, 19971868.8804
+
+                    // -20037508.3428, 19971868.8804              20037508.3428, 19971868.8804
+                    //
+                    //                               [-1.12028214123E7, 5806479.258599997]
+                    //
+                    // -20037508.3428, 0                0,0          20037508.3428, 0
+                    //
+                    //
+                    //
+                    // -20037508.3428, -19971868.8804             20037508.3428, -19971868.8804
+
+
+
+
+
+                  //  // add graphic to layer
+                  //  graphicsLayer.addGraphic(graphic);
+                }
+            }
+            // update message with results
+            message = String.valueOf(results.featureCount())
+                    + " results have returned from query.";
+
+        }
+        progress.dismiss();
+
+        //Toast toast = Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG);
+        //toast.show();
+
+        overlayView.show3DToast(message);
+
+        // boolQuery = false;
+
+    }
+
+}
+
 
   @Override
   public void onRendererShutdown() {
