@@ -1,5 +1,3 @@
-Cardboard Java
-=====================
-Copyright (c) 2014 Google Inc.  All rights reserved.
+VR Map Explorer
 
-[https://developers.google.com/cardboard/android/get-started](https://developers.google.com/cardboard/android/get-started)
+A TechCrunch Disrupt Hackathon 2015 entry
