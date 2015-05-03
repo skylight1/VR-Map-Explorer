@@ -52,6 +52,7 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
@@ -288,6 +289,30 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
 
     }
 
+
+
+    Float[] getEveryNthPointFromThisMultiPath(MultiPath arcMultiPathParam, int everyNpoints) {
+        int arcPointCount = arcMultiPathParam.getPointCount();
+        Log.e("arcadiusDebug", "arcPointCount: "+arcPointCount);
+
+        ArrayList<Float> newSmallerArrayToReturn = new ArrayList<Float>();
+
+        for(int i=0; i<arcMultiPathParam.getPointCount(); i+=everyNpoints) {
+            newSmallerArrayToReturn.add((float)arcMultiPathParam.getPoint(i).getX());
+            newSmallerArrayToReturn.add((float)arcMultiPathParam.getPoint(i).getZ());
+            newSmallerArrayToReturn.add((float)arcMultiPathParam.getPoint(i).getY());
+        }
+
+        Float[] simpleArray = new Float[ newSmallerArrayToReturn.size() ];
+
+        newSmallerArrayToReturn.toArray(simpleArray);
+
+        Log.e("arcadiusDebug", "Big array points: "+arcMultiPathParam.getPointCount());
+        Log.e("arcadiusDebug", "Small array points: "+simpleArray.length);
+        return simpleArray;
+    }
+
+
     @Override
     protected void onPostExecute(FeatureResult results) {
 
@@ -295,6 +320,7 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
 
         if (results != null) {
             int size = (int) results.featureCount();
+            Log.e("arcadiusDebug", "Number of Polygons: "+size);
             for (Object element : results) {
                 progress.incrementProgressBy(size / 100);
                 if (element instanceof Feature) {
@@ -303,21 +329,16 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
 
                     Geometry arcGeometry = feature.getGeometry();
                     Geometry.Type arcType = arcGeometry.getType();
-                    //int arcValue = arcType.value();
-
-
 
                     MultiPath arcMultiPath = (MultiPath)arcGeometry;
-                    int arcPointCount = arcMultiPath.getPointCount();
-
 
                     Graphic graphic = new Graphic(feature.getGeometry(),
                             feature.getSymbol(),
                             feature.getAttributes());
 
-                    Log.e("arcValue", "arcPointCount: "+arcPointCount);
-                    Log.e("arcValue", "arcType.name: "+arcType.name());
-                    Log.e("arcValue", "Point0: "+arcMultiPath.getPoint(0));
+                    Float[] SmallerArray = getEveryNthPointFromThisMultiPath(arcMultiPath, 100);
+
+
 
                     //Projected Bounds: -20037508.3428, -19971868.8804, 20037508.3428, 19971868.8804
 
