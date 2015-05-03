@@ -70,6 +70,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     private int mShapeMVMatrixHandle;
     private int[] shapeVertexOffsets;
     private int mShapeColorHandle;
+    private boolean renderShapes = true;
 
     private static class HelpfulArcGISImageServiceLayer extends ArcGISImageServiceLayer {
 
@@ -557,6 +558,12 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         return null;
     }
 
+    @Override
+    public void onCardboardTrigger() {
+        super.onCardboardTrigger();
+        renderShapes = ! renderShapes;
+    }
+
     /**
      * Prepares OpenGL ES before we draw a frame.
      *
@@ -608,7 +615,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     }
 
     private void drawShapes() {
-        if (!shapesLoaded) {
+        if (!shapesLoaded || !renderShapes) {
             return;
         }
 
