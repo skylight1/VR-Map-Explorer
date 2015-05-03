@@ -1,4 +1,4 @@
-package com.google.vrtoolkit.cardboard.samples.treasurehunt;
+package org.skylight1.vrmapexplorer;
 
 import android.opengl.GLES20;
 import android.util.Log;

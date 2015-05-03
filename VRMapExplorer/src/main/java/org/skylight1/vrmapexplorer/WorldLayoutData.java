@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.vrtoolkit.cardboard.samples.treasurehunt;
+package org.skylight1.vrmapexplorer;
 
 /**
  * Contains vertex, normal and color data.

@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.vrtoolkit.cardboard.samples.treasurehunt;
-
-import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
-import com.google.vrtoolkit.cardboard.CardboardActivity;
-import com.google.vrtoolkit.cardboard.CardboardView;
-import com.google.vrtoolkit.cardboard.Eye;
-import com.google.vrtoolkit.cardboard.HeadTransform;
-import com.google.vrtoolkit.cardboard.Viewport;
+package org.skylight1.vrmapexplorer;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -31,6 +24,13 @@ import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
+
+import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
+import com.google.vrtoolkit.cardboard.CardboardActivity;
+import com.google.vrtoolkit.cardboard.CardboardView;
+import com.google.vrtoolkit.cardboard.Eye;
+import com.google.vrtoolkit.cardboard.HeadTransform;
+import com.google.vrtoolkit.cardboard.Viewport;
 
 import java.io.BufferedReader;
 import java.io.IOException;
