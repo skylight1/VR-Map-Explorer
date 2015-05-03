@@ -249,12 +249,12 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         cardboardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(isVRMode) {
+                if (isVRMode) {
                     cardboardView.setVRModeEnabled(false);
-                    isVRMode=false;
+                    isVRMode = false;
                 } else {
                     cardboardView.setVRModeEnabled(true);
-                    isVRMode=true;
+                    isVRMode = true;
                 }
             }
         });
@@ -453,9 +453,9 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
         for (int j  = 0; j < smallerArray.length; j++) {
           for (int i = 0; i < smallerArray[j].length; i+=3) {
-              smallerArray[j][i] = (smallerArray[j][i] - offsetX) * scale;
+              smallerArray[j][i] = (smallerArray[j][i] - offsetX) * scale - 40;
               smallerArray[j][i + 1] = 5f;
-              smallerArray[j][i + 2] = (smallerArray[j][i + 2] - offsetZ) * scale;
+              smallerArray[j][i + 2] = (smallerArray[j][i + 2] - offsetZ) * scale - 40;
           }
         }
 
@@ -612,7 +612,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
             return;
         }
 
-        float shadeOfRed = ((float) Math.abs(System.currentTimeMillis() % 1000)) / 1000f;
+        float shadeOfRed = ((float) Math.abs(System.currentTimeMillis() % 1000)) / 2000f + 0.5f;
 
         GLES20.glUseProgram(shapeProgram);
 
