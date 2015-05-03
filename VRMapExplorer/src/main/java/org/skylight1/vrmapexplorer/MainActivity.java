@@ -91,7 +91,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   private static final int COORDS_PER_VERTEX = 3;
   private static final int COORDS_PER_TEXTURE = 2;
 
-    private static final int IMAGE_SIDE = 2000;
+    private static final int IMAGE_SIDE = 4000;
 
   // We keep the light always position just above the user.
   private static final float[] LIGHT_POS_IN_WORLD_SPACE = new float[] { 0.0f, 2.0f, 0.0f, 1.0f };
