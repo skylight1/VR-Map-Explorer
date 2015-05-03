@@ -30,13 +30,18 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.esri.android.map.MapView;
+import com.esri.android.map.ags.ArcGISImageServiceLayer;
 import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
+import com.esri.core.geometry.Envelope;
 import com.esri.core.geometry.Geometry;
 import com.esri.core.geometry.MultiPath;
+import com.esri.core.geometry.Point;
 import com.esri.core.geometry.SpatialReference;
+import com.esri.core.map.CallbackListener;
 import com.esri.core.map.Feature;
 import com.esri.core.map.FeatureResult;
 import com.esri.core.map.Graphic;
+import com.esri.core.map.ImageServiceParameters;
 import com.esri.core.tasks.query.QueryParameters;
 import com.esri.core.tasks.query.QueryTask;
 import com.google.vrtoolkit.cardboard.CardboardActivity;
@@ -60,22 +65,27 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
   private int mTextureDataHandle;
 
-  private static class HelpfulTileServiceLayer extends ArcGISTiledMapServiceLayer {
+    private static class HelpfulArcGISImageServiceLayer extends ArcGISImageServiceLayer {
 
-    public HelpfulTileServiceLayer(String url) {
-      super(url);
-    }
+        public HelpfulArcGISImageServiceLayer(String url, ImageServiceParameters options) {
+            super(url, options);
+        }
 
-    @Override
-    public byte[] getTile(int level, int col, int row) throws Exception {
-      return super.getTile(level, col, row);
+        @Override
+        public void getImageAsych(int w, int h, Envelope extent, CallbackListener<byte[]> imagecallback) {
+            super.getImageAsych(w, h, extent, imagecallback);
+        }
+
+        @Override
+        public byte[] getImage(int width, int height, Envelope extent) throws Exception {
+            return super.getImage(width, height, extent);
+        }
     }
-  }
 
   private static final String TAG = "MainActivity";
 
   private static final float Z_NEAR = 0.1f;
-  private static final float Z_FAR = 100.0f;
+  private static final float Z_FAR = 10000.0f;
 
   private static final float CAMERA_Z = 0.01f;
   private static final float TIME_DELTA = 0.3f;
@@ -85,6 +95,8 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
   // We keep the light always position just above the user.
   private static final float[] LIGHT_POS_IN_WORLD_SPACE = new float[] { 0.0f, 2.0f, 0.0f, 1.0f };
+
+  private static final Point mapCenter = new Point(-8835375.854977166, 5410791.715050752);
 
   private final float[] lightPosInEyeSpace = new float[4];
 
@@ -104,7 +116,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   private float[] modelFloor;
 
   private float objectDistance = 12f;
-  private float floorDepth = 20f;
+  private float floorDepth = 200f;
 
   private CardboardOverlayView overlayView;
 
@@ -464,17 +476,22 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
     checkGLError("onSurfaceCreated");
   }
 
-  public byte[] loadTile() {
-        try {
-          HelpfulTileServiceLayer tiledServiceLayer = new HelpfulTileServiceLayer(
-                  "http://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer");
+    public byte[] loadTile() {
+        ImageServiceParameters ops = new ImageServiceParameters();
+        ops.setFormat(ImageServiceParameters.IMAGE_FORMAT.JPG);
 
-          return tiledServiceLayer.getTile(10, 408, 175);
+        HelpfulArcGISImageServiceLayer imageServiceLayer = new HelpfulArcGISImageServiceLayer(
+                "http://sampleserver6.arcgisonline.com/arcgis/rest/services/Toronto/ImageServer",
+                ops);
+        try {
+            byte[] image = imageServiceLayer.getImage(1000, 1000, new Envelope(mapCenter, 15000, 15000));
+
+            return image;
         } catch (Exception e) {
-          e.printStackTrace();
-          throw new RuntimeException(e);
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-  }
+    }
 
   public int loadTexture(final Context context)
   {
@@ -596,71 +613,86 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
    * look strange.
    */
   public void drawFloor() {
-    GLES20.glUseProgram(floorProgram);
+      GLES20.glUseProgram(floorProgram);
+      checkGLError("drawing floor1");
 
-    // Set program handles for cube drawing.
-    mMVPMatrixHandle = GLES20.glGetUniformLocation(floorProgram, "u_MVPMatrix");
-    mMVMatrixHandle = GLES20.glGetUniformLocation(floorProgram, "u_MVMatrix");
-    mLightPosHandle = GLES20.glGetUniformLocation(floorProgram, "u_LightPos");
-    mTextureUniformHandle = GLES20.glGetUniformLocation(floorProgram, "u_Texture");
+      // Set program handles for cube drawing.
+      mMVPMatrixHandle = GLES20.glGetUniformLocation(floorProgram, "u_MVPMatrix");
+      mMVMatrixHandle = GLES20.glGetUniformLocation(floorProgram, "u_MVMatrix");
+      mLightPosHandle = GLES20.glGetUniformLocation(floorProgram, "u_LightPos");
+      mTextureUniformHandle = GLES20.glGetUniformLocation(floorProgram, "u_Texture");
+      checkGLError("drawing floor1");
 
-    mPositionHandle = GLES20.glGetAttribLocation(floorProgram, "a_Position");
-    mColorHandle = GLES20.glGetAttribLocation(floorProgram, "a_Color");
-    mNormalHandle = GLES20.glGetAttribLocation(floorProgram, "a_Normal");
-    mTextureCoordinateHandle = GLES20.glGetAttribLocation(floorProgram, "a_TexCoordinate");
-
-
-    GLES20.glEnableVertexAttribArray(mPositionHandle);
-    GLES20.glEnableVertexAttribArray(mNormalHandle);
-    GLES20.glEnableVertexAttribArray(mColorHandle);
-    GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+      mPositionHandle = GLES20.glGetAttribLocation(floorProgram, "a_Position");
+//    mColorHandle = GLES20.glGetAttribLocation(floorProgram, "a_Color");
+//    mNormalHandle = GLES20.glGetAttribLocation(floorProgram, "a_Normal");
+      mTextureCoordinateHandle = GLES20.glGetAttribLocation(floorProgram, "a_TexCoordinate");
+      checkGLError("drawing floor1");
 
 
-    floorVertices.position(0);
-    GLES20.glVertexAttribPointer(mPositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
-            0, floorVertices);
-    GLES20.glEnableVertexAttribArray(mPositionHandle);
+      floorVertices.position(0);
+      GLES20.glVertexAttribPointer(mPositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
+              0, floorVertices);
+      GLES20.glEnableVertexAttribArray(mPositionHandle);
+      checkGLError("drawing floor1");
 
-    floorColors.position(0);
-    GLES20.glVertexAttribPointer(mColorHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
-            0, floorColors);
-    GLES20.glEnableVertexAttribArray(mColorHandle);
 
-    // Pass in the normal information
-    floorNormals.position(0);
-    GLES20.glVertexAttribPointer(mNormalHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
-            0, floorNormals);
-    GLES20.glEnableVertexAttribArray(mNormalHandle);
+//    floorColors.position(0);
+//    GLES20.glVertexAttribPointer(mColorHandle, 4, GLES20.GL_FLOAT, false,
+//            0, floorColors);
+//    GLES20.glEnableVertexAttribArray(mColorHandle);
+//    checkGLError("drawing floor1");
 
-    floorTextureCoords.position(0);
-    GLES20.glVertexAttribPointer(mTextureCoordinateHandle, COORDS_PER_TEXTURE, GLES20.GL_FLOAT, false,
-            0, floorTextureCoords);
-    GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+      // Pass in the normal information
+//    floorNormals.position(0);
+//    GLES20.glVertexAttribPointer(mNormalHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
+//            0, floorNormals);
+//    GLES20.glEnableVertexAttribArray(mNormalHandle);
+//    checkGLError("drawing floor1");
 
-    // Pass in the modelview matrix.
-    GLES20.glUniformMatrix4fv(mMVMatrixHandle, 1, false, modelView, 0);
+      floorTextureCoords.position(0);
+      GLES20.glVertexAttribPointer(mTextureCoordinateHandle, COORDS_PER_TEXTURE, GLES20.GL_FLOAT, false,
+              0, floorTextureCoords);
+      GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+      checkGLError("drawing floor1");
 
-    // Pass in the combined matrix.
-    GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, modelViewProjection, 0);
+      // Pass in the modelview matrix.
+      GLES20.glUniformMatrix4fv(mMVMatrixHandle, 1, false, modelView, 0);
+      checkGLError("drawing floor1");
 
-    // Pass in the light position in eye space.
-    GLES20.glUniform3f(mLightPosHandle, 10, 10, 10);
+      // Pass in the combined matrix.
+      GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, modelViewProjection, 0);
+      checkGLError("drawing floor1");
 
-    // Bind the texture to this unit.
-    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
+      // Pass in the light position in eye space.
+      GLES20.glUniform3f(mLightPosHandle, 10, 10, 10);
+      checkGLError("drawing floor1");
 
-    // Tell the texture uniform sampler to use this texture in the shader by binding to texture unit 0.
-    GLES20.glUniform1i(mTextureUniformHandle, 0);
+      GLES20.glEnableVertexAttribArray(mPositionHandle);
+      checkGLError("drawing floor1");
+//    GLES20.glEnableVertexAttribArray(mNormalHandle);
+//    checkGLError("drawing floor1");
+//    GLES20.glEnableVertexAttribArray(mColorHandle);
+//    checkGLError("drawing floor1");
+      GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+      checkGLError("drawing floor1");
 
-    floorTextureCoords.position(0);
-    GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false,
-            0, floorTextureCoords);
+      // Bind the texture to this unit.
+      GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
+      checkGLError("drawing floor1");
 
-    checkGLError("drawing floor1");
+      // Tell the texture uniform sampler to use this texture in the shader by binding to texture unit 0.
+      GLES20.glUniform1i(mTextureUniformHandle, 0);
 
-    // Draw the cube.
-    GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6);
+//    floorTextureCoords.position(0);
+//    GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false,
+//            0, floorTextureCoords);
 
-    checkGLError("drawing floor");
+      checkGLError("drawing floor1");
+
+      // Draw the cube.
+      GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6);
+
+      checkGLError("drawing floor");
   }
 }
