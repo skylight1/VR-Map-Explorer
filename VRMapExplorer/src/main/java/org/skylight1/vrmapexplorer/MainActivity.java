@@ -29,9 +29,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.esri.android.map.MapView;
 import com.esri.android.map.ags.ArcGISImageServiceLayer;
-import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
 import com.esri.core.geometry.Envelope;
 import com.esri.core.geometry.Geometry;
 import com.esri.core.geometry.MultiPath;
@@ -93,6 +91,8 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   private static final int COORDS_PER_VERTEX = 3;
   private static final int COORDS_PER_TEXTURE = 2;
 
+    private static final int IMAGE_SIDE = 2000;
+
   // We keep the light always position just above the user.
   private static final float[] LIGHT_POS_IN_WORLD_SPACE = new float[] { 0.0f, 2.0f, 0.0f, 1.0f };
 
@@ -101,9 +101,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   private final float[] lightPosInEyeSpace = new float[4];
 
   private FloatBuffer floorVertices;
-  private FloatBuffer floorColors;
   private FloatBuffer floorTextureCoords;
-  private FloatBuffer floorNormals;
 
   private int floorProgram;
 
@@ -121,9 +119,6 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   private CardboardOverlayView overlayView;
 
   ProgressDialog progress;
-  MapView mMapView;
-
-
 
   /** This will be used to pass in the transformation matrix. */
   private int mMVPMatrixHandle;
@@ -140,18 +135,8 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
   /** This will be used to pass in model position information. */
   private int mPositionHandle;
 
-  /** This will be used to pass in model color information. */
-  private int mColorHandle;
-
-  /** This will be used to pass in model normal information. */
-  private int mNormalHandle;
-
   /** This will be used to pass in model texture coordinate information. */
   private int mTextureCoordinateHandle;
-
-
-
-
 
   /**
    * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -220,26 +205,6 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
     overlayView = (CardboardOverlayView) findViewById(R.id.overlay);
     overlayView.show3DToast("Pull the magnet when you find an object.");
-
-
-//  new Thread(new Runnable() {
-//      @Override
-//      public void run() {
-//
-//  try {
-//
-//      String[] queryArray = {"http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_Average_Household_Size/MapServer/3", "AVGHHSZ_CY>3.5"};
-//      AsyncQueryTask ayncQuery = new AsyncQueryTask();
-//      ayncQuery.execute(queryArray);
-//  } catch (Exception e) {
-//      Log.e("Arcadius Error","Before starting thread: begin ex");
-//      e.printStackTrace();
-//      Log.e("Arcadius Error","Before starting thread: end ex");
-//  }
-//
-//      }
-//  }).start();
-
 
   Runnable task = new Runnable() {
       public void run() {
@@ -349,27 +314,6 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
                             feature.getAttributes());
 
                     Float[] SmallerArray = getEveryNthPointFromThisMultiPath(arcMultiPath, 100);
-
-
-
-                    //Projected Bounds: -20037508.3428, -19971868.8804, 20037508.3428, 19971868.8804
-
-                    // -20037508.3428, 19971868.8804              20037508.3428, 19971868.8804
-                    //
-                    //                               [-1.12028214123E7, 5806479.258599997]
-                    //
-                    // -20037508.3428, 0                0,0          20037508.3428, 0
-                    //
-                    //
-                    //
-                    // -20037508.3428, -19971868.8804             20037508.3428, -19971868.8804
-
-
-
-
-
-                  //  // add graphic to layer
-                  //  graphicsLayer.addGraphic(graphic);
                 }
             }
             // update message with results
@@ -379,15 +323,8 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
         }
         progress.dismiss();
 
-        //Toast toast = Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG);
-        //toast.show();
-
         overlayView.show3DToast(message);
-
-        // boolQuery = false;
-
     }
-
 }
 
 
@@ -421,23 +358,11 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
     floorVertices.put(WorldLayoutData.FLOOR_COORDS);
     floorVertices.position(0);
 
-    ByteBuffer bbFloorNormals = ByteBuffer.allocateDirect(WorldLayoutData.FLOOR_NORMALS.length * 4);
-    bbFloorNormals.order(ByteOrder.nativeOrder());
-    floorNormals = bbFloorNormals.asFloatBuffer();
-    floorNormals.put(WorldLayoutData.FLOOR_NORMALS);
-    floorNormals.position(0);
-
-    ByteBuffer bbFloorColors = ByteBuffer.allocateDirect(WorldLayoutData.FLOOR_COLORS.length * 4);
-    bbFloorColors.order(ByteOrder.nativeOrder());
-    floorColors = bbFloorColors.asFloatBuffer();
-    floorColors.put(WorldLayoutData.FLOOR_COLORS);
-    floorColors.position(0);
-
     mTextureDataHandle = loadTexture(this);
 
     ByteBuffer bbFloorTextureCoords = ByteBuffer.allocateDirect(WorldLayoutData.FLOOR_TEXTURE_COORDS.length * 4);
     bbFloorTextureCoords.order(ByteOrder.nativeOrder());
-    floorTextureCoords = bbFloorColors.asFloatBuffer();
+    floorTextureCoords = bbFloorTextureCoords.asFloatBuffer();
     floorTextureCoords.put(WorldLayoutData.FLOOR_TEXTURE_COORDS);
     floorTextureCoords.position(0);
 
@@ -448,19 +373,6 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
             new String[]{"a_Position", "a_Color", "a_Normal", "a_TexCoordinate"});
 
     checkGLError("Floor program");
-
-//    floorModelParam = GLES20.glGetUniformLocation(floorProgram, "u_Model");
-//    floorModelViewParam = GLES20.glGetUniformLocation(floorProgram, "u_MVMatrix");
-//    floorModelViewProjectionParam = GLES20.glGetUniformLocation(floorProgram, "u_MVP");
-//    floorLightPosParam = GLES20.glGetUniformLocation(floorProgram, "u_LightPos");
-//
-//    floorPositionParam = GLES20.glGetAttribLocation(floorProgram, "a_Position");
-//    floorNormalParam = GLES20.glGetAttribLocation(floorProgram, "a_Normal");
-//    floorColorParam = GLES20.glGetAttribLocation(floorProgram, "a_Color");
-//
-//    GLES20.glEnableVertexAttribArray(floorPositionParam);
-//    GLES20.glEnableVertexAttribArray(floorNormalParam);
-//    GLES20.glEnableVertexAttribArray(floorColorParam);
 
     checkGLError("Floor program params");
 
@@ -484,7 +396,7 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
                 "http://sampleserver6.arcgisonline.com/arcgis/rest/services/Toronto/ImageServer",
                 ops);
         try {
-            byte[] image = imageServiceLayer.getImage(1000, 1000, new Envelope(mapCenter, 15000, 15000));
+            byte[] image = imageServiceLayer.getImage(IMAGE_SIDE, IMAGE_SIDE, new Envelope(mapCenter, 15000, 15000));
 
             return image;
         } catch (Exception e) {
@@ -636,20 +548,6 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
       GLES20.glEnableVertexAttribArray(mPositionHandle);
       checkGLError("drawing floor1");
 
-
-//    floorColors.position(0);
-//    GLES20.glVertexAttribPointer(mColorHandle, 4, GLES20.GL_FLOAT, false,
-//            0, floorColors);
-//    GLES20.glEnableVertexAttribArray(mColorHandle);
-//    checkGLError("drawing floor1");
-
-      // Pass in the normal information
-//    floorNormals.position(0);
-//    GLES20.glVertexAttribPointer(mNormalHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false,
-//            0, floorNormals);
-//    GLES20.glEnableVertexAttribArray(mNormalHandle);
-//    checkGLError("drawing floor1");
-
       floorTextureCoords.position(0);
       GLES20.glVertexAttribPointer(mTextureCoordinateHandle, COORDS_PER_TEXTURE, GLES20.GL_FLOAT, false,
               0, floorTextureCoords);
@@ -670,10 +568,6 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
 
       GLES20.glEnableVertexAttribArray(mPositionHandle);
       checkGLError("drawing floor1");
-//    GLES20.glEnableVertexAttribArray(mNormalHandle);
-//    checkGLError("drawing floor1");
-//    GLES20.glEnableVertexAttribArray(mColorHandle);
-//    checkGLError("drawing floor1");
       GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
       checkGLError("drawing floor1");
 
@@ -683,10 +577,6 @@ private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
 
       // Tell the texture uniform sampler to use this texture in the shader by binding to texture unit 0.
       GLES20.glUniform1i(mTextureUniformHandle, 0);
-
-//    floorTextureCoords.position(0);
-//    GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false,
-//            0, floorTextureCoords);
 
       checkGLError("drawing floor1");
 
