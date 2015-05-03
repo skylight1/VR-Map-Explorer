@@ -69,6 +69,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     private int mShapeMVPMatrixHandle;
     private int mShapeMVMatrixHandle;
     private int[] shapeVertexOffsets;
+    private int mShapeColorHandle;
 
     private static class HelpfulArcGISImageServiceLayer extends ArcGISImageServiceLayer {
 
@@ -128,9 +129,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     private float floorDepth = 100f;
 
     private CardboardOverlayView overlayView;
-
-//    ProgressDialog progress;
-
+    
     /**
      * This will be used to pass in the transformation matrix.
      */
@@ -261,7 +260,6 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         });
     }
 
-
     private class AsyncQueryTask extends AsyncTask<String, Void, FeatureResult> {
 
         @Override
@@ -300,7 +298,6 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
                 e.printStackTrace();
             }
             return null;
-
         }
 
 
@@ -442,8 +439,6 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
     }
 
     private void onGeometriesCreated() {
-//        smallerArray = new float[] {100, 10, -100, 100, 10, 100, -100, 10, 100, -100, 10, -100};
-
         RectF boundingRectangle = new RectF(smallerArray[0][0], smallerArray[0][2], smallerArray[0][0], smallerArray[0][2]);
         for (int j  = 0; j < smallerArray.length; j++) {
             for (int i = 3; i < smallerArray[j].length; i+=3) {
@@ -452,6 +447,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         }
 
         float scale = Math.min(2000f / boundingRectangle.width(), 2000f / boundingRectangle.height());
+        scale /= 5;
         float offsetX = boundingRectangle.centerX();
         float offsetZ = boundingRectangle.centerY();
 
@@ -616,12 +612,15 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
             return;
         }
 
+        float shadeOfRed = ((float) Math.abs(System.currentTimeMillis() % 1000)) / 1000f;
+
         GLES20.glUseProgram(shapeProgram);
 
         // Set program handles for cube drawing.
         mShapeMVPMatrixHandle = GLES20.glGetUniformLocation(shapeProgram, "u_MVPMatrix");
         mShapeMVMatrixHandle = GLES20.glGetUniformLocation(shapeProgram, "u_MVMatrix");
         mShapePositionHandle = GLES20.glGetAttribLocation(shapeProgram, "a_Position");
+        mShapeColorHandle = GLES20.glGetUniformLocation(shapeProgram, "u_Color");
 
         for (int j = 0; j < smallerArray.length; j++) {
             shapeVertices.position(shapeVertexOffsets[j]);
@@ -634,6 +633,9 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
             // Pass in the combined matrix.
             GLES20.glUniformMatrix4fv(mShapeMVPMatrixHandle, 1, false, modelViewProjection, 0);
+
+            // Pass in the color
+            GLES20.glUniform4f(mShapeColorHandle, shadeOfRed, 0, 0, 1);
 
             // Draw the cube.
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, smallerArray[j].length / 3);
