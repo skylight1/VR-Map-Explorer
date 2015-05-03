@@ -19,41 +19,26 @@ package org.skylight1.vrmapexplorer;
 /**
  * Contains vertex, normal and color data.
  */
+/**
+ * Contains vertex, normal and color data.
+ */
 public final class WorldLayoutData {
 
-  public static final float[] FLOOR_COORDS = new float[] {
-      200f, 0, -200f,
-      -200f, 0, -200f,
-      -200f, 0, 200f,
-      200f, 0, -200f,
-      -200f, 0, 200f,
-      200f, 0, 200f,
-  };
+    public static final float[] FLOOR_COORDS = new float[] {
+            1000f, 0, -1000f,
+            -1000f, 0, -1000f,
+            -1000f, 0, 1000f,
+            1000f, 0, -1000f,
+            -1000f, 0, 1000f,
+            1000f, 0, 1000f,
+    };
 
-  public static final float[] FLOOR_TEXTURE_COORDS = new float[] {
-      1, 0,
-      0, 0,
-      0, 1,
-      1, 0,
-      0, 1,
-      1, 1
-  };
-
-  public static final float[] FLOOR_NORMALS = new float[] {
-      0.0f, 1.0f, 0.0f,
-      0.0f, 1.0f, 0.0f,
-      0.0f, 1.0f, 0.0f,
-      0.0f, 1.0f, 0.0f,
-      0.0f, 1.0f, 0.0f,
-      0.0f, 1.0f, 0.0f,
-  };
-
-  public static final float[] FLOOR_COLORS = new float[] {
-      0.0f, 0.3398f, 0.9023f, 1.0f,
-      0.0f, 0.3398f, 0.9023f, 1.0f,
-      0.0f, 0.3398f, 0.9023f, 1.0f,
-      0.0f, 0.3398f, 0.9023f, 1.0f,
-      0.0f, 0.3398f, 0.9023f, 1.0f,
-      0.0f, 0.3398f, 0.9023f, 1.0f,
-  };
+    public static final float[] FLOOR_TEXTURE_COORDS = new float[] {
+            1, 0,
+            0, 0,
+            0, 1,
+            1, 0,
+            0, 1,
+            1, 1
+    };
 }
