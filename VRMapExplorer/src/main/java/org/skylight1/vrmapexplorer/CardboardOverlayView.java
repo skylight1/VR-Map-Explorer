@@ -55,8 +55,8 @@ public class CardboardOverlayView extends LinearLayout {
     addView(rightView);
 
     // Set some reasonable defaults.
-    setDepthOffset(0.016f);
-    setColor(Color.rgb(150, 255, 180));
+    setDepthOffset(0.032f);
+    setColor(Color.rgb(255, 255, 0));
     setVisibility(View.VISIBLE);
 
     textFadeAnimation = new AlphaAnimation(1.0f, 0.0f);
@@ -75,7 +75,27 @@ public class CardboardOverlayView extends LinearLayout {
     startAnimation(textFadeAnimation);
   }
 
-  private abstract class EndAnimationListener implements Animation.AnimationListener {
+    public void showProgressToast(String message) {
+        setText(message);
+        setTextAlpha(1f);
+        textFadeAnimation.setDuration(18000);
+        textFadeAnimation.setAnimationListener(new EndAnimationListener() {
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                setTextAlpha(0f);
+            }
+        });
+        startAnimation(textFadeAnimation);
+    }
+
+    public void incrementProgressBy(int increment) {
+        //TODO:
+    }
+    public void dismissProgressToast() {
+        textFadeAnimation.setDuration(0);
+    }
+
+    private abstract class EndAnimationListener implements Animation.AnimationListener {
     @Override public void onAnimationRepeat(Animation animation) {}
     @Override public void onAnimationStart(Animation animation) {}
   }

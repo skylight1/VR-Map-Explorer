@@ -16,7 +16,6 @@
 
 package org.skylight1.vrmapexplorer;
 
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -29,6 +28,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.View;
 
 import com.esri.android.map.ags.ArcGISImageServiceLayer;
 import com.esri.core.geometry.Envelope;
@@ -129,7 +129,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
     private CardboardOverlayView overlayView;
 
-    ProgressDialog progress;
+//    ProgressDialog progress;
 
     /**
      * This will be used to pass in the transformation matrix.
@@ -160,6 +160,8 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
      * This will be used to pass in model texture coordinate information.
      */
     private int mTextureCoordinateHandle;
+
+    private boolean isVRMode = true;
 
     /**
      * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -214,9 +216,11 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.common_ui);
-        CardboardView cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
+        final CardboardView cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
         cardboardView.setRenderer(this);
         setCardboardView(cardboardView);
+
+        cardboardView.setVignetteEnabled(false); //true is default (edge softening)
 
         modelCube = new float[16];
         camera = new float[16];
@@ -242,6 +246,19 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
             }
         };
         new Handler(Looper.getMainLooper()).post(task);
+
+        cardboardView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isVRMode) {
+                    cardboardView.setVRModeEnabled(false);
+                    isVRMode=false;
+                } else {
+                    cardboardView.setVRModeEnabled(true);
+                    isVRMode=true;
+                }
+            }
+        });
     }
 
 
@@ -249,10 +266,9 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
         @Override
         protected void onPreExecute() {
-            progress = new ProgressDialog(MainActivity.this);
-
-            progress = ProgressDialog.show(MainActivity.this, "",
-                    "Please wait....query task is executing");
+            overlayView.showProgressToast("please wait.... data loading...");
+            //progress = new ProgressDialog(MainActivity.this);
+            //progress = ProgressDialog.show(MainActivity.this, "", "please wait.... data loading...");
 
         }
 
@@ -325,7 +341,7 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
                 int i = 0;
                 for (Object element : results) {
-                    progress.incrementProgressBy(size / 100);
+                    overlayView.incrementProgressBy(size / 100);
                     if (element instanceof Feature) {
                         Feature feature = (Feature) element;
                         // turn feature into graphic\
@@ -348,9 +364,13 @@ public class MainActivity extends CardboardActivity implements CardboardView.Ste
 
                 onGeometriesCreated();
             }
-            progress.dismiss();
+            overlayView.dismissProgressToast();
 
-            overlayView.show3DToast(message);
+//            if(isVRMode) {
+//                overlayView.show3DToast(message);
+//            } else {
+//                Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+//            }
         }
     }
 
